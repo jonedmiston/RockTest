@@ -1487,7 +1487,13 @@ namespace RockWeb
                 if ( r == CacheItemRemovedReason.Expired )
                 {
                     // Process the transaction queue on another thread
-                    Task.Run( () => DrainTransactionQueue() );
+                    Task.Run( () =>
+                    {
+                        // The cache timer thread may have inherited an old
+                        // activity (such as startup). Draining is its own trace.
+                        Activity.Current = null;
+                        DrainTransactionQueue();
+                    } );
 
                     // add cache item again
                     AddCallBack();

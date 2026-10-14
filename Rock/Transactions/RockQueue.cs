@@ -107,7 +107,14 @@ namespace Rock.Transactions
                     Name = "Rock Fast Queue"
                 };
 
-                thread.Start( _fastQueueTokenSource.Token );
+                // Thread.Start captures the caller's ExecutionContext, which
+                // includes Activity.Current. This is called during application
+                // startup, so without suppressing the flow every span created
+                // by this long-lived thread would be added to the startup trace.
+                using ( ExecutionContext.SuppressFlow() )
+                {
+                    thread.Start( _fastQueueTokenSource.Token );
+                }
             }
         }
 

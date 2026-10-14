@@ -165,6 +165,11 @@ namespace Rock.Jobs
             // Add job observability if this is a legacy job.
             if ( !( context.JobInstance is RockJob ) )
             {
+                // Every job run is its own trace, so do not parent the span to
+                // an activity the scheduler thread may have inherited (such as
+                // application startup). The span is ended in JobWasExecuted.
+                Activity.Current = null;
+
                 var activity = ObservabilityHelper.StartActivity( $"JOB: {job.Class.Replace( "Rock.Jobs.", "" )} - {job.Name}" );
                 activity?.AddTag( "rock.otel_type", "rock-job" );
                 activity?.AddTag( "rock.job.id", job.Id );
