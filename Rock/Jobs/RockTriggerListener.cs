@@ -89,6 +89,11 @@ namespace Rock.Jobs
         /// <returns>Returns true if job execution should be vetoed, false otherwise.</returns>
         public bool VetoJobExecution( ITrigger trigger, IJobExecutionContext context )
         {
+            // This is the first Rock code to run on the Quartz worker thread for
+            // a fire. The thread may still carry the startup or web request
+            // Activity it was created under, so clear it before the lock work.
+            System.Diagnostics.Activity.Current = null;
+
             // ServiceJob.Id is stashed on JobDetail.Description at
             // BuildQuartzJob time, so this pulls the Rock domain identity we
             // key the distributed lock on.

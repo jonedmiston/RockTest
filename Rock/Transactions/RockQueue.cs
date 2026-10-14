@@ -107,14 +107,7 @@ namespace Rock.Transactions
                     Name = "Rock Fast Queue"
                 };
 
-                // Thread.Start captures the caller's ExecutionContext, which
-                // includes Activity.Current. This is called during application
-                // startup, so without suppressing the flow every span created
-                // by this long-lived thread would be added to the startup trace.
-                using ( ExecutionContext.SuppressFlow() )
-                {
-                    thread.Start( _fastQueueTokenSource.Token );
-                }
+                thread.Start( _fastQueueTokenSource.Token );
             }
         }
 
@@ -240,6 +233,11 @@ namespace Rock.Transactions
         /// <param name="parameter">The parameter passed to the thread, which is the <see cref="CancellationToken"/> used to terminate the thread.</param>
         private static void ProcessFastQueue( object parameter )
         {
+            // This thread is started during application startup and inherits the
+            // startup Activity. Clear it so the work done here is not recorded
+            // in the startup trace.
+            System.Diagnostics.Activity.Current = null;
+
             var cancellationToken = ( CancellationToken ) parameter;
             int processingIntervalInMilliseconds = 1_000;
             var lastLoggedExceptionTime = DateTime.MinValue;

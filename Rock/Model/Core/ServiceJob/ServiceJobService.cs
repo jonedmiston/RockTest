@@ -20,7 +20,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -103,7 +102,7 @@ namespace Rock.Model
                 var runNowSchedulerName = ( "RunNow:" + job.Guid.ToString( "N" ) ).Truncate( 40 );
                 scheduleConfig.Add( StdSchedulerFactory.PropertySchedulerInstanceName, runNowSchedulerName );
                 var schedulerFactory = new StdSchedulerFactory( scheduleConfig );
-                var sched = GetSchedulerWithoutExecutionContext( new StdSchedulerFactory( scheduleConfig ) );
+                var sched = new StdSchedulerFactory( scheduleConfig ).GetScheduler();
 
                 if ( sched.IsStarted )
                 {
@@ -414,34 +413,13 @@ namespace Rock.Model
         /// <value>The quartz scheduler.</value>
         internal static IScheduler QuartzScheduler { get; private set; } = null;
 
-        /// <summary>
-        /// Gets the scheduler from the factory without flowing the current
-        /// <see cref="ExecutionContext"/> to the threads Quartz creates.
-        /// </summary>
-        /// <remarks>
-        /// Quartz creates its scheduler and worker threads with <c>new Thread</c>,
-        /// and <c>Thread.Start</c> captures the caller's ExecutionContext. That
-        /// includes <see cref="System.Diagnostics.Activity.Current"/>, so jobs
-        /// would run with the startup (or web request) activity as their parent
-        /// for as long as the scheduler lives. This must not be used across an
-        /// <c>await</c>.
-        /// </remarks>
-        /// <param name="schedulerFactory">The scheduler factory.</param>
-        /// <returns>The scheduler.</returns>
-        private static IScheduler GetSchedulerWithoutExecutionContext( ISchedulerFactory schedulerFactory )
-        {
-            using ( ExecutionContext.SuppressFlow() )
-            {
-                return schedulerFactory.GetScheduler();
-            }
-        }
-
         internal static void InitializeJobScheduler()
         {
             using ( var rockContext = RockApp.Current.CreateRockContext() )
             {
                 // create scheduler
-                QuartzScheduler = GetSchedulerWithoutExecutionContext( new StdSchedulerFactory() );
+                ISchedulerFactory schedulerFactory = new StdSchedulerFactory();
+                QuartzScheduler = schedulerFactory.GetScheduler();
 
                 // get list of active jobs
                 ServiceJobService jobService = new ServiceJobService( rockContext );

@@ -178,12 +178,8 @@ namespace Rock.Jobs
         /// <param name="context"></param>
         internal void ExecuteInternal( IJobExecutionContext context )
         {
-            // Every job run is its own trace. Make sure it does not become a
-            // child of whatever activity the scheduler thread inherited (such
-            // as application startup or the web request that started a "Run
-            // Now"). This is intentionally not restored afterwards, since the
-            // old activity may already be stopped and the job span's disposal
-            // leaves the thread with no current activity.
+            // Every job run is its own trace. The Quartz worker thread may still
+            // carry the startup or web request Activity it was created under.
             System.Diagnostics.Activity.Current = null;
 
             using ( var activity = ObservabilityHelper.StartActivity( $"JOB: {GetType().FullName.Replace( "Rock.Jobs.", "" )} - {context.JobDetail.Key?.Group}" ) )

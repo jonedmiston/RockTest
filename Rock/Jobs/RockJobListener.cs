@@ -98,6 +98,11 @@ namespace Rock.Jobs
         /// <seealso cref="M:Quartz.IJobListener.JobExecutionVetoed(Quartz.IJobExecutionContext,System.Threading.CancellationToken)" />
         public void JobToBeExecuted( IJobExecutionContext context )
         {
+            // The Quartz worker thread may still carry the startup or web request
+            // Activity it was created under. Clear it so the database queries
+            // below and the job's own span are not added to that trace.
+            Activity.Current = null;
+
             // get job type id
             int jobId = context.JobDetail.Description.AsInteger();
 
@@ -165,11 +170,6 @@ namespace Rock.Jobs
             // Add job observability if this is a legacy job.
             if ( !( context.JobInstance is RockJob ) )
             {
-                // Every job run is its own trace, so do not parent the span to
-                // an activity the scheduler thread may have inherited (such as
-                // application startup). The span is ended in JobWasExecuted.
-                Activity.Current = null;
-
                 var activity = ObservabilityHelper.StartActivity( $"JOB: {job.Class.Replace( "Rock.Jobs.", "" )} - {job.Name}" );
                 activity?.AddTag( "rock.otel_type", "rock-job" );
                 activity?.AddTag( "rock.job.id", job.Id );
