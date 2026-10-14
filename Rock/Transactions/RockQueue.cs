@@ -233,6 +233,11 @@ namespace Rock.Transactions
         /// <param name="parameter">The parameter passed to the thread, which is the <see cref="CancellationToken"/> used to terminate the thread.</param>
         private static void ProcessFastQueue( object parameter )
         {
+            // This thread is started during application startup and inherits the
+            // startup Activity. Clear it so the work done here is not recorded
+            // in the startup trace.
+            System.Diagnostics.Activity.Current = null;
+
             var cancellationToken = ( CancellationToken ) parameter;
             int processingIntervalInMilliseconds = 1_000;
             var lastLoggedExceptionTime = DateTime.MinValue;

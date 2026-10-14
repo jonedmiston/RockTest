@@ -178,6 +178,10 @@ namespace Rock.Jobs
         /// <param name="context"></param>
         internal void ExecuteInternal( IJobExecutionContext context )
         {
+            // Every job run is its own trace. The Quartz worker thread may still
+            // carry the startup or web request Activity it was created under.
+            System.Diagnostics.Activity.Current = null;
+
             using ( var activity = ObservabilityHelper.StartActivity( $"JOB: {GetType().FullName.Replace( "Rock.Jobs.", "" )} - {context.JobDetail.Key?.Group}" ) )
             {
                 InitializeFromJobContext( context );
